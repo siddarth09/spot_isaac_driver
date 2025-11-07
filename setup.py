@@ -29,8 +29,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            # Make sure your Python file has a main() function
+            
             'spot_controller = spot_isaac_driver.spot_full_body_controller:main',
+            'spot_teleop = spot_isaac_driver.spot_teleop:main'
         ],
     },
 )
