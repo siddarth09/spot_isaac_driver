@@ -105,14 +105,24 @@ class SpotFullbodyController(Node):
         # Run policy
         self.forward(joint_state, imu)
 
-        # Publish joint commands
+        # 🔹 Only move if there’s a velocity command
+        if abs(self._cmd_vel.linear.x) < 1e-4 and abs(self._cmd_vel.linear.y) < 1e-4 and abs(self._cmd_vel.angular.z) < 1e-4:
+            # Hold default stance (don’t apply policy action)
+            action_pos = self.default_pos
+        else:
+            # Compute active stance
+            alpha = 0.2  # smooth blending
+            smoothed_action = (1 - alpha) * self._previous_action + alpha * self.action
+            action_pos = self.default_pos + smoothed_action * self._action_scale
+
+        # Publish joint command
         self._joint_command.header.stamp = self.get_clock().now().to_msg()
         self._joint_command.name = self.joint_names
-        action_pos = self.default_pos + self.action * self._action_scale
         self._joint_command.position = action_pos.tolist()
         self._joint_command.velocity = np.zeros(len(self.joint_names)).tolist()
         self._joint_command.effort = np.zeros(len(self.joint_names)).tolist()
         self._joint_publisher.publish(self._joint_command)
+
 
     def _compute_observation(self, joint_state: JointState, imu: Imu):
         quat_I = imu.orientation
@@ -159,12 +169,20 @@ class SpotFullbodyController(Node):
         return obs
 
     def _compute_action(self, obs):
+        """Run the neural network policy to compute an action from the observation.
+        
+        Args:
+            obs: Observation vector containing robot state information
+            
+        Returns:
+            np.ndarray: Action vector containing joint position adjustments
+        """
+        # Run inference with the PyTorch policy
         with torch.no_grad():
             obs = torch.from_numpy(obs).view(1, -1).float()
-            out = self.policy(obs)
-            out = torch.tanh(out)  # 🔹 Bound action to [-1, 1]
-            action = out.detach().view(-1).numpy()
+            action = self.policy(obs).detach().view(-1).numpy()
         return action
+
 
     def forward(self, joint_state: JointState, imu: Imu):
         obs = self._compute_observation(joint_state, imu)
