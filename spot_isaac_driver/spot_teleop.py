@@ -108,6 +108,7 @@ CTRL-C to quit
         pose_lite.roll = (not data.buttons[5]) * -data.axes[3] * 0.349066
         pose_lite.pitch = data.axes[4] * 0.174533
         pose_lite.yaw = data.buttons[5] * data.axes[3] * 0.436332
+        pose_lite.z = 0.0
         if data.axes[5] < 0:
             pose_lite.z = data.axes[5] * 0.5
         self.pose_lite_pub.publish(pose_lite)
