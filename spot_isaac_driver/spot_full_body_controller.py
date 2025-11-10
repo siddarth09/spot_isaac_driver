@@ -168,19 +168,14 @@ class SpotFullbodyController(Node):
         obs[36:48] = self._previous_action
         return obs
 
-    def _compute_action(self, obs):
-        """Run the neural network policy to compute an action from the observation.
-        
-        Args:
-            obs: Observation vector containing robot state information
-            
-        Returns:
-            np.ndarray: Action vector containing joint position adjustments
-        """
-        # Run inference with the PyTorch policy
+    def _compute_action(self, obs: np.ndarray) -> np.ndarray:
         with torch.no_grad():
-            obs = torch.from_numpy(obs).view(1, -1).float()
-            action = self.policy(obs).detach().view(-1).numpy()
+            obs_t = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+            out = self.policy(obs_t)
+            if not isinstance(out, torch.Tensor):
+                self._logger.error("Policy returned non-tensor output")
+                return np.zeros(12, dtype=np.float32)
+            action = out.cpu().numpy().reshape(-1)
         return action
 
 
@@ -205,9 +200,22 @@ class SpotFullbodyController(Node):
         ), dtype=np.float64)
 
     def load_policy(self):
-        with open(self.policy_path, 'rb') as f:
-            buffer = io.BytesIO(f.read())
-        self.policy = torch.jit.load(buffer)
+        try:
+            with open(self.policy_path, 'rb') as f:
+                buffer = io.BytesIO(f.read())
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            self.policy = torch.jit.load(buffer, map_location=self.device)
+            self.policy.eval()
+            torch.set_grad_enabled(False)
+            self._logger.info(f"Loaded policy on {self.device}: {self.policy_path}")
+        except Exception as e:
+            self._logger.error(f"Failed to load policy [{self.policy_path}]: {e}")
+            self.device = torch.device('cpu')
+            class _Zero(torch.nn.Module):
+                def forward(self, x):  # noqa
+                    return torch.zeros((x.shape[0], 12), dtype=torch.float32)
+            self.policy = _Zero().to(self.device)
+            self.policy.eval()
 
     def _get_stamp_prefix(self) -> str:
         now = time.time()
