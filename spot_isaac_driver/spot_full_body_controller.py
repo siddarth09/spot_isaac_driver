@@ -27,7 +27,7 @@ class SpotFullbodyController(Node):
 
         # Parameters
         self.declare_parameter('publish_period_ms', 5)
-        self.declare_parameter('policy_path', 'policy/spot_policy.pt')
+        self.declare_parameter('policy_path', 'policy/flat_terrain.pt')
         self.set_parameters([
             rclpy.parameter.Parameter(
                 'use_sim_time', rclpy.Parameter.Type.BOOL, True
