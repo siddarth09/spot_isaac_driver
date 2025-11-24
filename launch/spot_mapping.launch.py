@@ -5,12 +5,12 @@ def generate_launch_description():
 
     return LaunchDescription([
         # Static transform: map -> body
-        Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='static_map_to_body',
-            arguments=['0', '0', '0', '0', '0', '0', 'map', 'spot']
-        ),
+        # Node(
+        #     package='tf2_ros',
+        #     executable='static_transform_publisher',
+        #     name='static_map_to_body',
+        #     arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']
+        # ),
 
         # Octomap server
         Node(
