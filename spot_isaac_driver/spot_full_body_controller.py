@@ -27,7 +27,7 @@ class SpotFullbodyController(Node):
 
         # Parameters
         self.declare_parameter('publish_period_ms', 5)
-        self.declare_parameter('policy_path', 'policy/spot_policy.pt')
+        self.declare_parameter('policy_path', 'policy/flat_terrain.pt')
         self.set_parameters([
             rclpy.parameter.Parameter(
                 'use_sim_time', rclpy.Parameter.Type.BOOL, True
@@ -68,10 +68,10 @@ class SpotFullbodyController(Node):
         self._joint_command = JointState()
         self._cmd_vel = Twist()
         self._imu = Imu()
-        self._action_scale = 0.15
+        self._action_scale = 0.20
         self._previous_action = np.zeros(12)
         self._policy_counter = 0
-        self._decimation = 4
+        self._decimation = 10
         self._last_tick_time = self.get_clock().now().nanoseconds * 1e-9
         self._lin_vel_b = np.zeros(3)
         self._dt = 0.0
@@ -96,28 +96,36 @@ class SpotFullbodyController(Node):
         self._cmd_vel = msg
 
     def _tick(self, joint_state: JointState, imu: Imu):
+        """Process synchronized joint state and IMU data to generate robot commands.
+        
+        This method is called whenever new joint state and IMU data are available.
+        It computes the policy's action and publishes the resulting joint
+        commands.
+        
+        Args:
+            joint_state: Current joint positions and velocities
+            imu: Current IMU data (orientation, angular velocity, acceleration)
+        """
+        # Reset if time jumped backwards (most likely due to sim time reset)
         now = self.get_clock().now().nanoseconds * 1e-9
         if now < self._last_tick_time:
-            self._logger.error(f"{self._get_stamp_prefix()} Time jumped backwards. Resetting.")
-        self._dt = now - self._last_tick_time
+            self._logger.error(
+                f'{self._get_stamp_prefix()} Time jumped backwards. Resetting.'
+            )
+        
+        # Calculate time delta since last tick
+        self._dt = (now - self._last_tick_time)
         self._last_tick_time = now
 
-        # Run policy
+        # Run the control policy
         self.forward(joint_state, imu)
 
-        # 🔹 Only move if there’s a velocity command
-        if abs(self._cmd_vel.linear.x) < 1e-4 and abs(self._cmd_vel.linear.y) < 1e-4 and abs(self._cmd_vel.angular.z) < 1e-4:
-            # Hold default stance (don’t apply policy action)
-            action_pos = self.default_pos
-        else:
-            # Compute active stance
-            alpha = 0.2  # smooth blending
-            smoothed_action = (1 - alpha) * self._previous_action + alpha * self.action
-            action_pos = self.default_pos + smoothed_action * self._action_scale
-
-        # Publish joint command
+        # Prepare and publish the joint command message
         self._joint_command.header.stamp = self.get_clock().now().to_msg()
         self._joint_command.name = self.joint_names
+        
+        # Compute final joint positions by adding scaled actions to default positions
+        action_pos = self.default_pos + self.action * self._action_scale
         self._joint_command.position = action_pos.tolist()
         self._joint_command.velocity = np.zeros(len(self.joint_names)).tolist()
         self._joint_command.effort = np.zeros(len(self.joint_names)).tolist()
@@ -135,7 +143,7 @@ class SpotFullbodyController(Node):
             imu.linear_acceleration.z
         ])
         # 🔹 Disable integration (reduces drift)
-        lin_vel_b = np.zeros(3)
+        self._lin_vel_b = lin_acc_b * self._dt + self._lin_vel_b
 
         ang_vel_b = np.array([
             imu.angular_velocity.x,
@@ -145,7 +153,7 @@ class SpotFullbodyController(Node):
         gravity_b = np.matmul(R_BI, np.array([0.0, 0.0, -1.0]))
 
         obs = np.zeros(48)
-        obs[:3] = lin_vel_b
+        obs[:3] = self._lin_vel_b
         obs[3:6] = ang_vel_b
         obs[6:9] = gravity_b
         obs[9:12] = np.array([
@@ -180,6 +188,7 @@ class SpotFullbodyController(Node):
         # Run inference with the PyTorch policy
         with torch.no_grad():
             obs = torch.from_numpy(obs).view(1, -1).float()
+          
             action = self.policy(obs).detach().view(-1).numpy()
         return action
 
