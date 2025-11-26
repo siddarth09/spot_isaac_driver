@@ -44,6 +44,30 @@ def generate_launch_description():
         'spot_nav.rviz'
     )
 
+    static_tf = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="body_to_base_link_tf",
+        arguments=[
+            "0", "0", "0",        # x y z
+            "0", "0", "0",        # roll pitch yaw
+            "body", "base_link",  # parent → child
+        ],
+        parameters=[{"use_sim_time": True}],
+        output="screen"
+    )
+    static_tf_map = Node(
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="body_to_base_link_tf",
+        arguments=[
+            "0", "0", "0.8",        # x y z
+            "0", "0", "0",        # roll pitch yaw
+            "map", "world",  # parent → child
+        ],
+        parameters=[{"use_sim_time": True}],
+        output="screen"
+    )
     return LaunchDescription([
 
         # -------------------------------
@@ -79,6 +103,9 @@ def generate_launch_description():
                 'use_sim_time': use_sim_time,
                 'params_file': params_file,
             }.items()
-        )
+        ),
+
+        # static_tf,
+        # static_tf_map,
 
     ])
