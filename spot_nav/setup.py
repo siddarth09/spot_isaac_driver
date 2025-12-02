@@ -29,6 +29,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'vlm= spot_nav.vlm_ros:main'
         ],
     },
 )
