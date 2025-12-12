@@ -4,6 +4,8 @@
 
 This guide explains how to launch the **RL locomotion controller** and **Nav2 navigation stack** for the Spot robot inside **Isaac Sim**.
 
+https://github.com/user-attachments/assets/f34d3a30-2202-4b94-832d-f1564d404dcb
+
 ---
 
 ## ✅ 1. Start Isaac Sim & Load the Environment
