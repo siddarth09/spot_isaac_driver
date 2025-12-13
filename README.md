@@ -1,6 +1,6 @@
 
 
-# 🚀 Spot Navigation & RL Controller – Quick Start Guide
+#  Spot Navigation & RL Controller – Quick Start Guide
 
 This guide explains how to launch the **RL locomotion controller** and **Nav2 navigation stack** for the Spot robot inside **Isaac Sim**.
 
