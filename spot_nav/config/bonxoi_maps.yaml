@@ -1,0 +1,67 @@
+controller_node:
+  ros__parameters:
+    use_sim_time: true
+    controller_types: [dummy]
+    dummy:
+      rt_freq: 30.0
+      plugin: easynav_controller/DummyController
+      cycle_time_nort: 0.01
+      cycle_time_rt: 0.001
+
+localizer_node:
+  ros__parameters:
+    use_sim_time: true
+    localizer_types: [dummy]
+    dummy:
+      rt_freq: 50.0
+      freq: 5.0
+      reseed_freq: 0.1
+      plugin: easynav_localizer/DummyLocalizer
+      cycle_time_nort: 0.01
+      cycle_time_rt: 0.001
+
+maps_manager_node:
+  ros__parameters:
+    use_sim_time: true
+    map_types: [bonxai, navmap]
+    bonxai:
+      freq: 10.0
+      plugin: easynav_bonxai_maps_manager/BonxaiMapsManager
+      package: spot_nav
+      # bonxai_path_file: /home/ubuntu/quad_ws/src/spot_isaac/spot_nav/maps/outdoor.pcd
+    navmap:
+      freq: 10.0
+      plugin: easynav_navmap_maps_manager/NavMapMapsManager
+      package: spot_nav
+      # navmap_path_file: /home/ubuntu/quad_ws/src/spot_isaac/spot_nav/maps/outdoor.navmap
+
+planner_node:
+  ros__parameters:
+    use_sim_time: true
+    planner_types: [dummy]
+    dummy:
+      freq: 1.0
+      plugin: easynav_planner/DummyPlanner
+      cycle_time_nort: 0.2
+      cycle_time_rt: 0.001
+
+sensors_node:
+  ros__parameters:
+    use_sim_time: true
+    forget_time: 0.5
+    sensors: [laser, camera, imu]
+    perception_default_frame: odom
+    laser:
+      topic: /ouster/point_cloud
+      type: sensor_msgs/msg/PointCloud2
+    
+    imu:
+      topic: /imu
+      type: sensor_msgs/msg/Imu
+
+system_node:
+  ros__parameters:
+    use_sim_time: true
+    use_real_time: false
+    position_tolerance: 0.3
+    angle_tolerance: 0.15

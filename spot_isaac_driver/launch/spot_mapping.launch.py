@@ -24,7 +24,7 @@ def generate_launch_description():
                 {"publish_free_space": True},
             ],
             remappings=[
-                ("cloud_in", "/point_cloud"),
+                ("cloud_in", "/ouster/point_cloud"),
             ],
             output='screen'
         ),
